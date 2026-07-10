@@ -4,11 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cambiar PIN — Copo Loyalty</title>
+  <link rel="icon" type="image/png" href="./assets/favicon.png" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --brand: #FF6B35;
-      --brand-dark: #e55a24;
+      --brand: #2563EB;
+      --brand-dark: #1D4ED8;
       --green: #16A34A;
       --red: #DC2626;
       --border: #E5E7EB;
@@ -64,6 +65,8 @@
     .pin-row { display: flex; gap: 10px; }
     .pin-row input {
       flex: 1;
+      width: 0;
+      min-width: 0;
       border: 1.5px solid var(--border);
       border-radius: 12px;
       padding: 14px 0;
@@ -114,13 +117,21 @@
       transition: background .15s;
     }
     .back-btn:hover { background: var(--brand-dark); }
+
+    /* ── Powered by Copo ─────────────────────────────────── */
+    .powered-by {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      margin-top: 24px; opacity: 0.55;
+    }
+    .powered-by span { font-size: 11px; font-weight: 600; color: var(--muted); }
+    .powered-by img { height: 16px; width: auto; }
   </style>
 </head>
 <body>
 
 <div class="pass-header">
-  <div class="pass-logo" id="pass-logo">CR</div>
-  <div class="pass-name" id="pass-name">Copo Rewards</div>
+  <div class="pass-logo" id="pass-logo"><img src="./assets/favicon.png" alt="Copo" style="width:70%;height:70%;object-fit:contain" /></div>
+  <div class="pass-name" id="pass-name">Copo Loyalty</div>
   <div class="pass-sub">Cambio de PIN</div>
 </div>
 
@@ -174,6 +185,11 @@
     <a class="back-btn" href="javascript:void(0)" onclick="goToPass()">
       Ver mi tarjeta
     </a>
+  </div>
+
+  <div class="powered-by">
+    <span>Powered by</span>
+    <img src="./assets/copo-logo.png" alt="Copo Loyalty" />
   </div>
 
 </div>

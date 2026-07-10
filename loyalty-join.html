@@ -4,12 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Únete — Copo Loyalty</title>
+  <link rel="icon" type="image/png" href="./assets/favicon.png" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --brand:   #FF6B35;
-      --brand-dark: #e55a24;
+      --brand:   #2563EB;
+      --brand-dark: #1D4ED8;
       --text-on-brand: #fff;
       --bg:      #F7F9FC;
       --surface: #fff;
@@ -98,6 +99,9 @@
     /* PIN */
     .pin-row { display: flex; gap: 10px; }
     .pin-row input {
+      flex: 1;
+      width: 0;
+      min-width: 0;
       text-align: center;
       font-size: 24px; font-weight: 800;
       letter-spacing: 0.1em;
@@ -160,6 +164,14 @@
 
     .err { font-size: 12px; color: #DC2626; margin-top: 4px; display: none; }
     .err.visible { display: block; }
+
+    /* ── Powered by Copo ─────────────────────────────────── */
+    .powered-by {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      margin-top: 28px; opacity: 0.55;
+    }
+    .powered-by span { font-size: 11px; font-weight: 600; color: var(--muted); }
+    .powered-by img { height: 16px; width: auto; }
   </style>
 </head>
 <body>
@@ -258,6 +270,11 @@
     </div>
   </div>
 
+  <div class="powered-by">
+    <span>Powered by</span>
+    <img src="./assets/copo-logo.png" alt="Copo Loyalty" />
+  </div>
+
 </div>
 
 <script>
@@ -269,21 +286,30 @@
   const API_BASE = window.COPO_API_BASE || 'https://api-loyalty.copopos.com'
 
   function applyBranding(card) {
-    const color = card.brandColor || '#FF6B35'
+    const color = card.brandColor || '#2563EB'
     document.querySelector('.pass-header').style.background = color
     document.documentElement.style.setProperty('--brand', color)
     document.getElementById('pass-name').textContent = card.programName || card.name
     document.getElementById('pass-desc').textContent = card.description
-    const initials = (card.programName || card.name || 'LP').slice(0, 2).toUpperCase()
-    document.getElementById('pass-logo').textContent = initials
-    document.getElementById('pass-logo').style.background = 'rgba(255,255,255,0.2)'
+    const logoEl = document.getElementById('pass-logo')
+    if (card.logoUrl) {
+      logoEl.textContent = ''
+      logoEl.innerHTML = `<img src="${card.logoUrl}" alt="" style="width:70%;height:70%;object-fit:contain" />`
+    } else if (card.fallback) {
+      // No se pudo cargar la tarjeta del negocio — mostramos el logo de Copo en vez de iniciales genéricas
+      logoEl.textContent = ''
+      logoEl.innerHTML = `<img src="./assets/favicon.png" alt="Copo" style="width:70%;height:70%;object-fit:contain" />`
+    } else {
+      logoEl.textContent = (card.programName || card.name || 'LP').slice(0, 2).toUpperCase()
+    }
+    logoEl.style.background = 'rgba(255,255,255,0.2)'
     document.title = `Únete — ${card.programName || card.name}`
   }
 
   fetch(`${API_BASE}/api/v1/loyalty/public/${cardId}`)
     .then(r => r.json())
     .then(res => applyBranding(res.data || {}))
-    .catch(() => applyBranding({ programName: 'Loyalty', description: '', brandColor: '#FF6B35' }))
+    .catch(() => applyBranding({ programName: 'Copo Loyalty', description: 'Tarjetas de lealtad digitales', brandColor: '#2563EB', fallback: true }))
 
   // ── Autofill from localStorage ──────────────────────────────────────────────
   const saved = (() => { try { return JSON.parse(localStorage.getItem('copo_loyalty_profile') || 'null') } catch { return null } })()
