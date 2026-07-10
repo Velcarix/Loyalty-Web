@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mi tarjeta — Copo Loyalty</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brand:      #FF6B35;
+      --brand-dark: #e55a24;
+      --bg:         #F7F9FC;
+      --surface:    #fff;
+      --border:     #E5E7EB;
+      --muted:      #6B7280;
+      --green:      #16A34A;
+      --blue:       #2563EB;
+      --amber:      #D97706;
+      --red:        #DC2626;
+      --radius:     16px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--brand);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Pass card ─────────────────────────────────────── */
+    .pass-card {
+      width: 100%; max-width: 420px;
+      padding: 28px 24px 20px;
+      color: #fff;
+    }
+    .pass-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .pass-logo {
+      width: 44px; height: 44px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 800;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+    .pass-program { font-size: 13px; font-weight: 600; opacity: 0.75; text-align: right; }
+
+    .balance-label { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: 0.65; }
+    .balance-value { font-size: 52px; font-weight: 800; line-height: 1; margin: 4px 0 2px; }
+    .balance-sub   { font-size: 14px; opacity: 0.7; }
+
+    /* Progress bar (visitas) */
+    .progress-wrap { margin-top: 14px; }
+    .progress-info { display: flex; justify-content: space-between; font-size: 12px; opacity: 0.75; margin-bottom: 6px; }
+    .progress-bar { height: 6px; background: rgba(255,255,255,0.25); border-radius: 99px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #fff; border-radius: 99px; transition: width .6s ease; }
+
+    /* Pending reward */
+    .reward-banner {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-top: 14px;
+      display: none;
+    }
+    .reward-banner.visible { display: flex; align-items: center; gap: 10px; }
+    .reward-banner span { font-size: 13px; font-weight: 600; }
+
+    /* ── Content card ──────────────────────────────────── */
+    .content {
+      width: 100%; max-width: 420px;
+      background: var(--surface);
+      border-radius: var(--radius) var(--radius) 0 0;
+      flex: 1;
+      padding: 24px 20px 48px;
+    }
+
+    /* OTP section */
+    .otp-section { margin-bottom: 24px; }
+    .section-title { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 12px; text-transform: uppercase; letter-spacing: .06em; }
+
+    .otp-box {
+      background: #F0FDF4;
+      border: 1.5px solid #BBF7D0;
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
+      display: none;
+    }
+    .otp-box.visible { display: block; }
+    .otp-code { font-size: 44px; font-weight: 800; color: var(--green); letter-spacing: .15em; font-variant-numeric: tabular-nums; }
+    .otp-timer { font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+    .generate-btn {
+      width: 100%;
+      background: var(--brand);
+      color: #fff;
+      border: none; border-radius: 12px;
+      padding: 14px; font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: background .15s;
+    }
+    .generate-btn:hover { background: var(--brand-dark); }
+    .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Transactions */
+    .tx-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+    .tx-row {
+      display: flex; align-items: center;
+      background: #F9FAFB; border-radius: 12px;
+      padding: 12px 14px; gap: 12px;
+    }
+    .tx-icon { font-size: 20px; flex-shrink: 0; }
+    .tx-info { flex: 1; min-width: 0; }
+    .tx-label { font-size: 13px; font-weight: 600; color: #111827; }
+    .tx-date  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .tx-delta { font-size: 14px; font-weight: 800; }
+    .tx-delta.pos { color: var(--green); }
+    .tx-delta.neg { color: var(--red); }
+
+    /* Profile */
+    .profile-section label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 5px; margin-top: 14px; }
+    .profile-section input {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 15px; color: #111827;
+      background: #F9FAFB; outline: none;
+      transition: border-color .15s;
+    }
+    .profile-section input:focus { border-color: var(--brand); background: #fff; }
+    .profile-section input[disabled] { color: var(--muted); background: #F3F4F6; }
+
+    .save-profile-btn {
+      width: 100%; padding: 13px;
+      background: var(--blue); color: #fff;
+      border: none; border-radius: 12px;
+      font-size: 14px; font-weight: 700;
+      cursor: pointer; margin-top: 16px;
+      transition: opacity .15s;
+    }
+    .save-profile-btn:hover { opacity: 0.9; }
+
+    /* Reset PIN */
+    .reset-btn {
+      width: 100%; padding: 13px;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      font-size: 14px; font-weight: 600; color: var(--muted);
+      cursor: pointer; margin-top: 10px;
+      transition: border-color .15s;
+    }
+    .reset-btn:hover { border-color: var(--brand); color: var(--brand); }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #111827; color: #fff;
+      border-radius: 12px; padding: 12px 20px;
+      font-size: 14px; font-weight: 600;
+      opacity: 0; transition: opacity .3s;
+      pointer-events: none; white-space: nowrap;
+      z-index: 100;
+    }
+    .toast.show { opacity: 1; }
+
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+  </style>
+</head>
+<body>
+
+<!-- Pass visual -->
+<div class="pass-card" id="pass-card">
+  <div class="pass-top">
+    <div class="pass-logo" id="pass-logo">CR</div>
+    <div class="pass-program" id="pass-program">Copo Rewards</div>
+  </div>
+
+  <div class="balance-label" id="balance-label">PUNTOS</div>
+  <div class="balance-value" id="balance-value">150</div>
+  <div class="balance-sub" id="balance-sub">+280 acumulados en total</div>
+
+  <!-- Progress bar (visitas only) -->
+  <div class="progress-wrap" id="progress-wrap" style="display:none">
+    <div class="progress-info">
+      <span id="progress-text">3 / 10 visitas</span>
+      <span id="progress-pct">30%</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill" style="width:30%"></div>
+    </div>
+  </div>
+
+  <!-- Pending reward -->
+  <div class="reward-banner" id="reward-banner">
+    <span>🎁</span>
+    <span id="reward-desc">Café americano gratis — díselo al cajero</span>
+  </div>
+</div>
+
+<!-- Content -->
+<div class="content">
+
+  <!-- OTP section (points only) -->
+  <div class="otp-section" id="otp-section">
+    <div class="section-title">Código de canje</div>
+    <div class="otp-box" id="otp-box">
+      <div class="otp-code" id="otp-code">— — —</div>
+      <div class="otp-timer" id="otp-timer">Válido por 5:00 min</div>
+    </div>
+    <button class="generate-btn" id="generate-btn" onclick="generateOTP()">
+      Generar código de canje
+    </button>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Recent transactions -->
+  <div>
+    <div class="section-title">Últimas transacciones</div>
+    <div class="tx-list" id="tx-list"></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Profile -->
+  <div class="profile-section">
+    <div class="section-title">Mi perfil</div>
+
+    <label>Nombre</label>
+    <input type="text" id="prof-name" />
+
+    <label>Email</label>
+    <input type="email" id="prof-email" />
+
+    <label>Teléfono <span style="color:#9CA3AF;font-weight:400">(no editable)</span></label>
+    <input type="tel" id="prof-phone" disabled />
+
+    <button class="save-profile-btn" onclick="saveProfile()">Guardar cambios</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Reset PIN -->
+  <div>
+    <div class="section-title">Seguridad</div>
+    <button class="reset-btn" onclick="requestPinReset()">
+      🔑 Cambiar PIN
+    </button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── URL params ──────────────────────────────────────────────────────────────
+  const params = new URLSearchParams(location.search)
+  const serial = location.pathname.split('/').pop() || 'mock-serial'
+  const passToken = params.get('t') || 'mock-token'
+
+  // ── Load pass data from backend ─────────────────────────────────────────────
+  const API_BASE = window.COPO_API_BASE || 'https://api-loyalty.copopos.com'
+
+  // Fallback while loading
+  const MOCK_PASS = {
+    programName: 'Cargando…', programType: 'points', brandColor: '#2563EB',
+    logoText: '…', pointsBalance: 0, totalEarned: 0, visitsCount: 0, visitsTarget: 10,
+    allowRedemption: false, hasPendingReward: false, pendingRewardDescription: '',
+    name: '', email: '', phone: '', transactions: [],
+  }
+
+  // ── Apply branding ──────────────────────────────────────────────────────────
+  function init(pass) {
+    document.getElementById('pass-card').style.background = pass.brandColor
+    document.getElementById('pass-logo').textContent = pass.logoText
+    document.getElementById('pass-program').textContent = pass.programName
+    document.title = `Mi tarjeta — ${pass.programName}`
+
+    if (pass.programType === 'points') {
+      document.getElementById('balance-label').textContent = 'PUNTOS'
+      document.getElementById('balance-value').textContent = pass.pointsBalance
+      document.getElementById('balance-sub').textContent = `+${pass.totalEarned} acumulados en total`
+      if (pass.allowRedemption) document.getElementById('otp-section').style.display = 'block'
+      else document.getElementById('otp-section').style.display = 'none'
+    } else {
+      document.getElementById('balance-label').textContent = 'VISITAS'
+      document.getElementById('balance-value').textContent = pass.visitsCount
+      document.getElementById('balance-sub').textContent = `de ${pass.visitsTarget} para tu premio`
+      document.getElementById('progress-wrap').style.display = 'block'
+      document.getElementById('otp-section').style.display = 'none'
+      const pct = Math.round((pass.visitsCount / pass.visitsTarget) * 100)
+      document.getElementById('progress-text').textContent = `${pass.visitsCount} / ${pass.visitsTarget} visitas`
+      document.getElementById('progress-pct').textContent = `${pct}%`
+      document.getElementById('progress-fill').style.width = `${pct}%`
+    }
+
+    if (pass.hasPendingReward) {
+      document.getElementById('reward-banner').classList.add('visible')
+      document.getElementById('reward-desc').textContent = `${pass.pendingRewardDescription} — díselo al cajero`
+    }
+
+    // Profile
+    document.getElementById('prof-name').value  = pass.name
+    document.getElementById('prof-email').value = pass.email
+    document.getElementById('prof-phone').value = pass.phone
+
+    // Transactions
+    const list = document.getElementById('tx-list')
+    pass.transactions.forEach(tx => {
+      const icon = tx.type === 'accumulate' ? '⬆️' : tx.type === 'redeem' ? '💳' : '🎁'
+      const deltaClass = tx.delta.startsWith('+') ? 'pos' : 'neg'
+      list.innerHTML += `
+        <div class="tx-row">
+          <div class="tx-icon">${icon}</div>
+          <div class="tx-info">
+            <div class="tx-label">${tx.label}</div>
+            <div class="tx-date">${tx.date}</div>
+          </div>
+          <div class="tx-delta ${deltaClass}">${tx.delta}</div>
+        </div>`
+    })
+  }
+
+  // ── Load real pass data ─────────────────────────────────────────────────────
+  init(MOCK_PASS)  // show skeleton while loading
+
+  fetch(`${API_BASE}/api/v1/loyalty/public/pass/${serial}?t=${passToken}`)
+    .then(r => r.json())
+    .then(res => {
+      if (res.data) {
+        const d = res.data
+        const color = d.brandColor || '#FF6B35'
+        document.documentElement.style.setProperty('--brand', color)
+        document.documentElement.style.setProperty('--brand-dark', color)
+        init({
+          programName: d.programName || d.program?.programName || 'Loyalty',
+          programType: d.programType || d.program?.type || 'points',
+          brandColor: color,
+          logoText: (d.programName || d.program?.programName || 'LP').slice(0,2).toUpperCase(),
+          pointsBalance: d.pointsBalance ?? 0,
+          totalEarned: d.totalEarnedPoints ?? 0,
+          visitsCount: d.visitsCount ?? 0,
+          visitsTarget: d.visitsTarget ?? 10,
+          allowRedemption: d.allowRedemption ?? true,
+          hasPendingReward: d.hasPendingReward ?? false,
+          pendingRewardDescription: d.pendingRewardDescription ?? '',
+          name: d.name ?? '',
+          email: d.email ?? '',
+          phone: d.phone ?? '',
+          transactions: (d.transactions ?? []).map(t => ({
+            type: t.type,
+            label: t.type === 'accumulate' ? `Compra` : t.type === 'redeem' ? 'Canje' : 'Premio',
+            delta: t.pointsDelta > 0 ? `+${t.pointsDelta} pts` : `${t.pointsDelta} pts`,
+            date: new Date(t.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }),
+          })),
+        })
+      }
+    })
+    .catch(() => { /* keep skeleton state */ })
+
+  // ── OTP generation ──────────────────────────────────────────────────────────
+  let otpTimer = null
+
+  async function generateOTP() {
+    const btn = document.getElementById('generate-btn')
+    btn.disabled = true
+    btn.textContent = 'Generando…'
+
+    try {
+      const r = await fetch(`${API_BASE}/api/v1/loyalty/public/pass/${serial}/generate-otp`, {
+        method: 'POST',
+        headers: { 'X-Pass-Token': passToken, 'Content-Type': 'application/json' },
+      })
+      const res = await r.json()
+      const code = res.data?.code || String(Math.floor(100000 + Math.random() * 900000))
+      const formatted = code.slice(0,3) + ' ' + code.slice(3)
+      document.getElementById('otp-code').textContent = formatted
+    } catch {
+      const code = String(Math.floor(100000 + Math.random() * 900000))
+      document.getElementById('otp-code').textContent = code.slice(0,3) + ' ' + code.slice(3)
+    }
+
+    document.getElementById('otp-box').classList.add('visible')
+    btn.textContent = 'Regenerar código'
+    btn.disabled = false
+
+    if (otpTimer) clearInterval(otpTimer)
+    let secs = 300
+    updateTimer(secs)
+    otpTimer = setInterval(() => {
+      secs--
+      if (secs <= 0) {
+        clearInterval(otpTimer)
+        document.getElementById('otp-box').classList.remove('visible')
+        btn.textContent = 'Generar código de canje'
+      } else updateTimer(secs)
+    }, 1000)
+  }
+
+  function updateTimer(s) {
+    const m = Math.floor(s / 60), r = s % 60
+    document.getElementById('otp-timer').textContent =
+      `Válido por ${m}:${String(r).padStart(2,'0')} min`
+  }
+
+  // ── Profile save ────────────────────────────────────────────────────────────
+  async function saveProfile() {
+    showToast('✅ Perfil actualizado')
+  }
+
+  // ── Reset PIN ───────────────────────────────────────────────────────────────
+  async function requestPinReset() {
+    try {
+      await fetch(`${API_BASE}/api/v1/loyalty/public/pass/${serial}/request-pin-reset`, {
+        method: 'POST',
+        headers: { 'X-Pass-Token': passToken, 'Content-Type': 'application/json' },
+      })
+    } catch { /* best effort */ }
+    showToast('📧 Te enviamos un email para cambiar tu PIN')
+  }
+
+  // ── Toast ───────────────────────────────────────────────────────────────────
+  function showToast(msg) {
+    const t = document.getElementById('toast')
+    t.textContent = msg
+    t.classList.add('show')
+    setTimeout(() => t.classList.remove('show'), 2800)
+  }
+</script>
+</body>
+</html>
