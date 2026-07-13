@@ -293,12 +293,18 @@
     document.getElementById('pass-desc').textContent = card.description
     const logoEl = document.getElementById('pass-logo')
     if (card.logoUrl) {
-      logoEl.textContent = ''
-      logoEl.innerHTML = `<img src="${card.logoUrl}" alt="" style="width:70%;height:70%;object-fit:contain" />`
+      const img = document.createElement('img')
+      img.src = card.logoUrl
+      img.alt = ''
+      img.style.cssText = 'width:70%;height:70%;object-fit:contain'
+      logoEl.replaceChildren(img)
     } else if (card.fallback) {
       // No se pudo cargar la tarjeta del negocio — mostramos el logo de Copo en vez de iniciales genéricas
-      logoEl.textContent = ''
-      logoEl.innerHTML = `<img src="./assets/favicon.png" alt="Copo" style="width:70%;height:70%;object-fit:contain" />`
+      const img = document.createElement('img')
+      img.src = './assets/favicon.png'
+      img.alt = 'Copo'
+      img.style.cssText = 'width:70%;height:70%;object-fit:contain'
+      logoEl.replaceChildren(img)
     } else {
       logoEl.textContent = (card.programName || card.name || 'LP').slice(0, 2).toUpperCase()
     }

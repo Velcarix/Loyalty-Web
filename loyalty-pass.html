@@ -292,10 +292,13 @@
     document.getElementById('pass-card').style.background = pass.brandColor
     const logoEl = document.getElementById('pass-logo')
     if (pass.logoUrl) {
-      logoEl.textContent = ''
-      logoEl.innerHTML = `<img src="${pass.logoUrl}" alt="" style="width:70%;height:70%;object-fit:contain" />`
+      const img = document.createElement('img')
+      img.src = pass.logoUrl
+      img.alt = ''
+      img.style.cssText = 'width:70%;height:70%;object-fit:contain'
+      logoEl.replaceChildren(img)
     } else {
-      logoEl.innerHTML = ''
+      logoEl.replaceChildren()
       logoEl.textContent = pass.logoText
     }
     document.getElementById('pass-program').textContent = pass.programName
@@ -334,22 +337,24 @@
     pass.transactions.forEach(tx => {
       const icon = tx.type === 'accumulate' ? '⬆️' : tx.type === 'redeem' ? '💳' : '🎁'
       const deltaClass = tx.delta.startsWith('+') ? 'pos' : 'neg'
-      list.innerHTML += `
-        <div class="tx-row">
-          <div class="tx-icon">${icon}</div>
-          <div class="tx-info">
-            <div class="tx-label">${tx.label}</div>
-            <div class="tx-date">${tx.date}</div>
-          </div>
-          <div class="tx-delta ${deltaClass}">${tx.delta}</div>
-        </div>`
+      const row = document.createElement('div'); row.className = 'tx-row'
+      const iconEl = document.createElement('div'); iconEl.className = 'tx-icon'; iconEl.textContent = icon
+      const info = document.createElement('div'); info.className = 'tx-info'
+      const labelEl = document.createElement('div'); labelEl.className = 'tx-label'; labelEl.textContent = tx.label
+      const dateEl = document.createElement('div'); dateEl.className = 'tx-date'; dateEl.textContent = tx.date
+      info.append(labelEl, dateEl)
+      const deltaEl = document.createElement('div'); deltaEl.className = 'tx-delta ' + deltaClass; deltaEl.textContent = tx.delta
+      row.append(iconEl, info, deltaEl)
+      list.append(row)
     })
   }
 
   // ── Load real pass data ─────────────────────────────────────────────────────
   init(MOCK_PASS)  // show skeleton while loading
 
-  fetch(`${API_BASE}/api/v1/loyalty/public/pass/${serial}?t=${passToken}`)
+  fetch(`${API_BASE}/api/v1/loyalty/public/pass/${serial}`, {
+    headers: { 'X-Pass-Token': passToken },
+  })
     .then(r => r.json())
     .then(res => {
       if (res.data) {
