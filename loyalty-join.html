@@ -318,7 +318,21 @@
     .catch(() => applyBranding({ programName: 'Copo Loyalty', description: 'Tarjetas de lealtad digitales', brandColor: '#2563EB', fallback: true }))
 
   // ── Autofill from localStorage ──────────────────────────────────────────────
-  const saved = (() => { try { return JSON.parse(localStorage.getItem('copo_loyalty_profile') || 'null') } catch { return null } })()
+  const saved = (() => {
+    try {
+      const profile = JSON.parse(localStorage.getItem('copo_loyalty_profile') || 'null')
+      const savedAt = Date.parse(profile?.saved_at || '')
+      const maxAgeMs = 30 * 24 * 60 * 60 * 1000
+      if (!savedAt || savedAt > Date.now() || Date.now() - savedAt > maxAgeMs) {
+        localStorage.removeItem('copo_loyalty_profile')
+        return null
+      }
+      return profile
+    } catch {
+      localStorage.removeItem('copo_loyalty_profile')
+      return null
+    }
+  })()
 
   if (saved?.name) {
     document.getElementById('autofill-name').textContent = saved.name
@@ -442,8 +456,6 @@
     // Save profile to localStorage for autofill on next registration
     const profile = {
       name: document.getElementById('name').value.trim(),
-      phone: document.getElementById('phone').value.trim(),
-      email: document.getElementById('email').value.trim(),
       saved_at: new Date().toISOString(),
     }
     localStorage.setItem('copo_loyalty_profile', JSON.stringify(profile))

@@ -274,7 +274,8 @@
   // ── URL params ──────────────────────────────────────────────────────────────
   const params = new URLSearchParams(location.search)
   const serial = location.pathname.split('/').pop() || 'mock-serial'
-  const passToken = params.get('t') || 'mock-token'
+  const passToken = params.get('t') || ''
+  if (params.has('t')) history.replaceState(null, '', location.pathname + location.hash)
 
   // ── Load pass data from backend ─────────────────────────────────────────────
   const API_BASE = window.COPO_API_BASE || 'https://api-loyalty.copopos.com'
@@ -403,12 +404,18 @@
         headers: { 'X-Pass-Token': passToken, 'Content-Type': 'application/json' },
       })
       const res = await r.json()
-      const code = res.data?.code || String(Math.floor(100000 + Math.random() * 900000))
+      if (!r.ok || typeof res.data?.code !== 'string' || !/^\d{6}$/.test(res.data.code)) {
+        throw new Error('No se pudo generar un código válido')
+      }
+      const code = res.data.code
       const formatted = code.slice(0,3) + ' ' + code.slice(3)
       document.getElementById('otp-code').textContent = formatted
     } catch {
-      const code = String(Math.floor(100000 + Math.random() * 900000))
-      document.getElementById('otp-code').textContent = code.slice(0,3) + ' ' + code.slice(3)
+      document.getElementById('otp-box').classList.remove('visible')
+      showToast('No se pudo generar el código. Intenta de nuevo.')
+      btn.textContent = 'Generar código de canje'
+      btn.disabled = false
+      return
     }
 
     document.getElementById('otp-box').classList.add('visible')

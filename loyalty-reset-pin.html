@@ -198,6 +198,11 @@
   const params  = new URLSearchParams(location.search)
   const token   = params.get('token') || location.pathname.split('/').pop()
   const serial  = params.get('serial') || ''
+  if (params.has('token')) {
+    params.delete('token')
+    const safeQuery = params.toString()
+    history.replaceState(null, '', location.pathname + (safeQuery ? `?${safeQuery}` : '') + location.hash)
+  }
   const API_BASE = window.COPO_API_BASE || 'https://api-loyalty.copopos.com'
 
   // Apply branding from URL param or program lookup
