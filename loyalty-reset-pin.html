@@ -10,6 +10,7 @@
     :root {
       --brand: #2563EB;
       --brand-dark: #1D4ED8;
+      --text-on-brand: #fff;
       --green: #16A34A;
       --red: #DC2626;
       --border: #E5E7EB;
@@ -25,15 +26,17 @@
     .pass-header {
       width: 100%; max-width: 420px;
       padding: 32px 24px 24px;
-      color: #fff;
+      color: var(--text-on-brand);
     }
     .pass-logo {
       width: 44px; height: 44px;
-      background: rgba(255,255,255,0.2);
+      background: #fff;
       border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
       font-size: 18px; font-weight: 800;
-      border: 1px solid rgba(255,255,255,0.3);
+      border: 1px solid rgba(11,19,43,0.12);
+      color: #0B132B;
+      box-shadow: 0 4px 12px rgba(11,19,43,0.12);
       margin-bottom: 14px;
     }
     .pass-name { font-size: 20px; font-weight: 800; margin-bottom: 2px; }
@@ -93,7 +96,7 @@
 
     .submit-btn {
       width: 100%; padding: 15px;
-      background: var(--brand); color: #fff;
+      background: var(--brand); color: var(--text-on-brand);
       border: none; border-radius: 14px;
       font-size: 16px; font-weight: 800;
       cursor: pointer; margin-top: 28px;
@@ -124,7 +127,7 @@
       margin-top: 24px; opacity: 0.55;
     }
     .powered-by span { font-size: 11px; font-weight: 600; color: var(--muted); }
-    .powered-by img { height: 16px; width: auto; }
+    .copo-wordmark { width: 64px; height: 30px; background: url('./assets/copo-logo.png') center / 140% auto no-repeat; }
   </style>
 </head>
 <body>
@@ -189,7 +192,7 @@
 
   <div class="powered-by">
     <span>Powered by</span>
-    <img src="./assets/copo-logo.png" alt="Copo Loyalty" />
+    <span class="copo-wordmark" role="img" aria-label="Copo"></span>
   </div>
 
 </div>
@@ -205,12 +208,30 @@
   }
   const API_BASE = window.COPO_API_BASE || 'https://api-loyalty.copopos.com'
 
+  function normalizeBrandColor(color) {
+    const normalized = String(color).trim().replace(/^#/, '')
+    const fullHex = normalized.length === 3 ? normalized.split('').map(c => c + c).join('') : normalized
+    return /^[0-9a-f]{6}$/i.test(fullHex) ? `#${fullHex.toUpperCase()}` : '#2563EB'
+  }
+
+  function getTextOnBrand(color) {
+    const fullHex = normalizeBrandColor(color).slice(1)
+    const channels = [0, 2, 4].map(i => parseInt(fullHex.slice(i, i + 2), 16) / 255)
+    const [r, g, b] = channels.map(c => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    const whiteContrast = 1.05 / (luminance + 0.05)
+    return whiteContrast >= 4.5 && whiteContrast >= (luminance + 0.05) / 0.05 ? '#FFFFFF' : '#000000'
+  }
+
   // Apply branding from URL param or program lookup
   const brandColor = params.get('color') ? decodeURIComponent(params.get('color')) : null
   if (brandColor) {
-    document.documentElement.style.setProperty('--brand', brandColor)
-    document.documentElement.style.setProperty('--brand-dark', brandColor)
-    document.querySelector('.pass-header').style.background = brandColor
+    const effectiveColor = normalizeBrandColor(brandColor)
+    const textColor = getTextOnBrand(effectiveColor)
+    document.documentElement.style.setProperty('--brand', effectiveColor)
+    document.documentElement.style.setProperty('--brand-dark', effectiveColor)
+    document.documentElement.style.setProperty('--text-on-brand', textColor)
+    document.querySelector('.pass-header').style.background = effectiveColor
   }
 
   // ── PIN inputs ──────────────────────────────────────────────────────────────

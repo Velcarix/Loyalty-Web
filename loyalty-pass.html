@@ -11,6 +11,7 @@
     :root {
       --brand:      #2563EB;
       --brand-dark: #1D4ED8;
+      --text-on-brand: #fff;
       --bg:         #F7F9FC;
       --surface:    #fff;
       --border:     #E5E7EB;
@@ -35,16 +36,18 @@
     .pass-card {
       width: 100%; max-width: 420px;
       padding: 28px 24px 20px;
-      color: #fff;
+      color: var(--text-on-brand);
     }
     .pass-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
     .pass-logo {
       width: 44px; height: 44px;
-      background: rgba(255,255,255,0.2);
+      background: #fff;
       border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
       font-size: 16px; font-weight: 800;
-      border: 1px solid rgba(255,255,255,0.3);
+      border: 1px solid rgba(11,19,43,0.12);
+      color: #0B132B;
+      box-shadow: 0 4px 12px rgba(11,19,43,0.12);
     }
     .pass-program { font-size: 13px; font-weight: 600; opacity: 0.75; text-align: right; }
 
@@ -56,7 +59,7 @@
     .progress-wrap { margin-top: 14px; }
     .progress-info { display: flex; justify-content: space-between; font-size: 12px; opacity: 0.75; margin-bottom: 6px; }
     .progress-bar { height: 6px; background: rgba(255,255,255,0.25); border-radius: 99px; overflow: hidden; }
-    .progress-fill { height: 100%; background: #fff; border-radius: 99px; transition: width .6s ease; }
+    .progress-fill { height: 100%; background: var(--text-on-brand); border-radius: 99px; transition: width .6s ease; }
 
     /* Pending reward */
     .reward-banner {
@@ -98,7 +101,7 @@
     .generate-btn {
       width: 100%;
       background: var(--brand);
-      color: #fff;
+      color: var(--text-on-brand);
       border: none; border-radius: 12px;
       padding: 14px; font-size: 15px; font-weight: 700;
       cursor: pointer; transition: background .15s;
@@ -176,7 +179,7 @@
       margin-top: 24px; opacity: 0.55;
     }
     .powered-by span { font-size: 11px; font-weight: 600; color: var(--muted); }
-    .powered-by img { height: 16px; width: auto; }
+    .copo-wordmark { width: 64px; height: 30px; background: url('./assets/copo-logo.png') center / 140% auto no-repeat; }
   </style>
 </head>
 <body>
@@ -263,7 +266,7 @@
 
   <div class="powered-by">
     <span>Powered by</span>
-    <img src="./assets/copo-logo.png" alt="Copo Loyalty" />
+    <span class="copo-wordmark" role="img" aria-label="Copo"></span>
   </div>
 
 </div>
@@ -280,6 +283,21 @@
   // ── Load pass data from backend ─────────────────────────────────────────────
   const API_BASE = window.COPO_API_BASE || 'https://api-loyalty.copopos.com'
 
+  function normalizeBrandColor(color) {
+    const normalized = String(color).trim().replace(/^#/, '')
+    const fullHex = normalized.length === 3 ? normalized.split('').map(c => c + c).join('') : normalized
+    return /^[0-9a-f]{6}$/i.test(fullHex) ? `#${fullHex.toUpperCase()}` : '#2563EB'
+  }
+
+  function getTextOnBrand(color) {
+    const fullHex = normalizeBrandColor(color).slice(1)
+    const channels = [0, 2, 4].map(i => parseInt(fullHex.slice(i, i + 2), 16) / 255)
+    const [r, g, b] = channels.map(c => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    const whiteContrast = 1.05 / (luminance + 0.05)
+    return whiteContrast >= 4.5 && whiteContrast >= (luminance + 0.05) / 0.05 ? '#FFFFFF' : '#000000'
+  }
+
   // Fallback while loading
   const MOCK_PASS = {
     programName: 'Cargando…', programType: 'points', brandColor: '#2563EB',
@@ -290,13 +308,16 @@
 
   // ── Apply branding ──────────────────────────────────────────────────────────
   function init(pass) {
-    document.getElementById('pass-card').style.background = pass.brandColor
+    const effectiveColor = normalizeBrandColor(pass.brandColor)
+    document.getElementById('pass-card').style.background = effectiveColor
+    const textColor = getTextOnBrand(effectiveColor)
+    document.documentElement.style.setProperty('--text-on-brand', textColor)
     const logoEl = document.getElementById('pass-logo')
     if (pass.logoUrl) {
       const img = document.createElement('img')
       img.src = pass.logoUrl
       img.alt = ''
-      img.style.cssText = 'width:70%;height:70%;object-fit:contain'
+      img.style.cssText = 'width:82%;height:82%;object-fit:contain'
       logoEl.replaceChildren(img)
     } else {
       logoEl.replaceChildren()
@@ -360,7 +381,7 @@
     .then(res => {
       if (res.data) {
         const d = res.data
-        const color = d.brandColor || '#2563EB'
+        const color = normalizeBrandColor(d.brandColor || '#2563EB')
         document.documentElement.style.setProperty('--brand', color)
         document.documentElement.style.setProperty('--brand-dark', color)
         init({
