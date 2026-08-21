@@ -463,14 +463,29 @@
         daySelect.appendChild(opt)
       }
 
+      const yearSelect = document.createElement('select')
+      yearSelect.id = 'dob-year'
+      const yearPlaceholder = document.createElement('option')
+      yearPlaceholder.value = ''
+      yearPlaceholder.textContent = 'Año'
+      yearSelect.appendChild(yearPlaceholder)
+      const currentYear = new Date().getFullYear()
+      for (let y = currentYear; y >= currentYear - 100; y--) {
+        const opt = document.createElement('option')
+        opt.value = String(y)
+        opt.textContent = String(y)
+        yearSelect.appendChild(opt)
+      }
+
       row.appendChild(monthSelect)
       row.appendChild(daySelect)
+      row.appendChild(yearSelect)
       container.appendChild(row)
 
       const err = document.createElement('span')
       err.className = 'err'
       err.id = 'dob-err'
-      err.textContent = 'Elige mes y día'
+      err.textContent = 'Elige día, mes y año'
       container.appendChild(err)
     }
 
@@ -586,7 +601,8 @@
     if (programConfig.askBirthday) {
       const month = document.getElementById('dob-month').value
       const day = document.getElementById('dob-day').value
-      if (!month || !day) { showErr('dob-err', 'Elige mes y día'); ok = false }
+      const year = document.getElementById('dob-year').value
+      if (!month || !day || !year) { showErr('dob-err', 'Elige día, mes y año'); ok = false }
     }
     if (programConfig.askGender && !selectedGender) {
       showErr('gender-err', 'Elige una opción')
@@ -619,7 +635,8 @@
     if (programConfig.askBirthday) {
       const month = document.getElementById('dob-month').value
       const day = document.getElementById('dob-day').value
-      body.birthdayDate = `${month}-${day}`
+      const year = document.getElementById('dob-year').value
+      body.birthdayDate = `${year}-${month}-${day}`
     }
     if (programConfig.askGender && selectedGender) {
       body.gender = selectedGender
