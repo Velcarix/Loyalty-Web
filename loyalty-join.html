@@ -425,8 +425,6 @@
   }
 
   // ── Submit ──────────────────────────────────────────────────────────────────
-  let pendingSerial = null
-
   async function handleSubmit() {
     if (!validate()) return
     const btn = document.getElementById('submit-btn')
@@ -453,7 +451,6 @@
       if (!r.ok) throw new Error(res.error?.message || 'Error al registrar')
       googlePassUrl = res.data?.passDownloadUrls?.google || null
       applePassUrl = res.data?.passDownloadUrls?.apple || null
-      pendingSerial = res.data?.customer?.id || null
     } catch (err) {
       btn.disabled = false
       btn.classList.remove('loading')
@@ -486,9 +483,37 @@
       alert('Apple Wallet no está disponible por ahora. Intenta con Google Wallet.')
       return
     }
-    document.getElementById('polling-msg').classList.add('visible')
+    // El serial va como penúltimo segmento de la URL de descarga:
+    // .../pass/{serial}/download
+    const segments = url.split('/').filter(Boolean)
+    const serial = segments[segments.length - 2] || null
+
+    const msg = document.getElementById('polling-msg')
+    msg.textContent = '⏳ Esperando confirmación del Wallet… (puede tardar unos segundos)'
+    msg.classList.add('visible')
     window.location.href = url
-    setTimeout(showSuccess, 2000)
+    pollApplePassStatus(serial, msg)
+  }
+
+  // iOS no le avisa a esta página si el usuario aceptó, canceló o si el pase
+  // falló al agregarse — solo lo sabemos cuando el dispositivo llama a
+  // register-device en el backend (ver apple-pass.ts), que marca
+  // passRegistered = true. Se hace polling a /pass/:serial/status en vez de
+  // asumir éxito con un timeout fijo.
+  async function pollApplePassStatus(serial, msg) {
+    if (!serial) { showSuccess(); return }
+    const deadline = Date.now() + 45000
+    while (Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 2000))
+      try {
+        const r = await fetch(`${API_BASE}/api/v1/loyalty/public/pass/${serial}/status`)
+        const res = await r.json()
+        if (res.data?.passRegistered) { showSuccess(); return }
+      } catch {
+        // sigue intentando hasta el deadline
+      }
+    }
+    msg.textContent = 'No pudimos confirmar automáticamente. Si ya ves tu tarjeta en Apple Wallet, ¡ya quedó lista! Si no aparece, intenta de nuevo.'
   }
 
   // ── Success ─────────────────────────────────────────────────────────────────
