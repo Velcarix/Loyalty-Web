@@ -98,6 +98,43 @@
     input:focus { border-color: var(--brand); background: #fff; }
     input.error { border-color: #DC2626; }
 
+    select {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 13px 16px;
+      font-size: 16px;
+      color: #111827;
+      background: #F9FAFB;
+      outline: none;
+      transition: border-color .15s;
+    }
+    select:focus { border-color: var(--brand); background: #fff; }
+    select.error { border-color: #DC2626; }
+
+    /* Fecha de nacimiento */
+    .dob-row { display: flex; gap: 10px; }
+    .dob-row select { flex: 1; }
+    .dob-row.error select { border-color: #DC2626; }
+
+    /* Género */
+    .gender-row { display: flex; gap: 10px; }
+    .gender-btn {
+      flex: 1;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 13px 0;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: #6B7280;
+      background: #F9FAFB;
+      cursor: pointer;
+      transition: border-color .15s, background .15s, color .15s;
+    }
+    .gender-btn.selected { border-color: var(--brand); background: var(--brand); color: #fff; }
+    .gender-row.error .gender-btn { border-color: #DC2626; }
+
     /* PIN */
     .pin-row { display: flex; gap: 10px; }
     .pin-row.error input { border-color: #DC2626; }
@@ -211,6 +248,8 @@
     <label for="email">Email</label>
     <input type="email" id="email" placeholder="juan@email.com" autocomplete="email" />
     <span class="err" id="email-err">Ingresa un email válido</span>
+
+    <div id="dynamic-fields"></div>
 
     <label>PIN de 4 dígitos <span style="font-weight:400;color:var(--muted)">(para canjear puntos)</span></label>
     <div class="pin-row" id="pin">
@@ -335,7 +374,7 @@
 
   fetch(`${API_BASE}/api/v1/loyalty/public/${cardId}`)
     .then(r => r.json())
-    .then(res => applyBranding(res.data || {}))
+    .then(res => { applyBranding(res.data || {}); renderDynamicFields(res.data || {}) })
     .catch(() => applyBranding({ programName: 'Copo Loyalty', description: 'Tarjetas de lealtad digitales', brandColor: '#2563EB', fallback: true }))
 
   // ── Autofill from localStorage ──────────────────────────────────────────────
@@ -372,6 +411,126 @@
     document.getElementById('autofill-banner').classList.remove('visible')
   }
 
+  // ── Campos dinámicos (fecha de nacimiento / género / campos custom) ─────────
+  // Configurables por negocio en el dashboard. Se arman con createElement, no
+  // innerHTML — los labels de campos custom vienen del negocio y no se sanitizan
+  // server-side (ver fix 018c07e, mismo criterio para no reabrir el XSS).
+  let programConfig = { askBirthday: false, askGender: false, customFields: [] }
+  let selectedGender = null
+  const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
+  function renderDynamicFields(card) {
+    programConfig = {
+      askBirthday: !!card.askBirthday,
+      askGender: !!card.askGender,
+      customFields: Array.isArray(card.customFields) ? card.customFields.filter(f => f && f.id && f.label) : [],
+    }
+    const container = document.getElementById('dynamic-fields')
+    container.replaceChildren()
+
+    if (programConfig.askBirthday) {
+      const label = document.createElement('label')
+      label.textContent = 'Fecha de nacimiento'
+      container.appendChild(label)
+
+      const row = document.createElement('div')
+      row.className = 'dob-row'
+      row.id = 'dob'
+
+      const monthSelect = document.createElement('select')
+      monthSelect.id = 'dob-month'
+      const monthPlaceholder = document.createElement('option')
+      monthPlaceholder.value = ''
+      monthPlaceholder.textContent = 'Mes'
+      monthSelect.appendChild(monthPlaceholder)
+      MONTH_NAMES.forEach((name, i) => {
+        const opt = document.createElement('option')
+        opt.value = String(i + 1).padStart(2, '0')
+        opt.textContent = name
+        monthSelect.appendChild(opt)
+      })
+
+      const daySelect = document.createElement('select')
+      daySelect.id = 'dob-day'
+      const dayPlaceholder = document.createElement('option')
+      dayPlaceholder.value = ''
+      dayPlaceholder.textContent = 'Día'
+      daySelect.appendChild(dayPlaceholder)
+      for (let d = 1; d <= 31; d++) {
+        const opt = document.createElement('option')
+        opt.value = String(d).padStart(2, '0')
+        opt.textContent = String(d)
+        daySelect.appendChild(opt)
+      }
+
+      row.appendChild(monthSelect)
+      row.appendChild(daySelect)
+      container.appendChild(row)
+
+      const err = document.createElement('span')
+      err.className = 'err'
+      err.id = 'dob-err'
+      err.textContent = 'Elige mes y día'
+      container.appendChild(err)
+    }
+
+    if (programConfig.askGender) {
+      const label = document.createElement('label')
+      label.textContent = 'Género'
+      container.appendChild(label)
+
+      const row = document.createElement('div')
+      row.className = 'gender-row'
+      row.id = 'gender'
+
+      ;[['male', 'Masculino'], ['female', 'Femenino']].forEach(([value, text]) => {
+        const btn = document.createElement('div')
+        btn.className = 'gender-btn'
+        btn.dataset.value = value
+        btn.textContent = text
+        btn.addEventListener('click', () => selectGender(value))
+        row.appendChild(btn)
+      })
+      container.appendChild(row)
+
+      const err = document.createElement('span')
+      err.className = 'err'
+      err.id = 'gender-err'
+      err.textContent = 'Elige una opción'
+      container.appendChild(err)
+    }
+
+    programConfig.customFields.forEach(field => {
+      const label = document.createElement('label')
+      label.setAttribute('for', `cf-${field.id}`)
+      label.textContent = field.label + (field.required ? '' : ' (opcional)')
+      container.appendChild(label)
+
+      const input = document.createElement('input')
+      input.type = 'text'
+      input.id = `cf-${field.id}`
+      input.maxLength = 200
+      container.appendChild(input)
+
+      const err = document.createElement('span')
+      err.className = 'err'
+      err.id = `cf-${field.id}-err`
+      err.textContent = 'Este campo es obligatorio'
+      container.appendChild(err)
+    })
+  }
+
+  function selectGender(value) {
+    selectedGender = value
+    document.querySelectorAll('.gender-btn').forEach(btn => {
+      btn.classList.toggle('selected', btn.dataset.value === value)
+    })
+    const row = document.getElementById('gender')
+    if (row) row.classList.remove('error')
+    const err = document.getElementById('gender-err')
+    if (err) err.classList.remove('visible')
+  }
+
   // ── Phone input formatting — (999) 123-4567, solo dígitos, máx 10 ───────────
   function formatPhone(value) {
     const digits = value.replace(/\D/g, '').slice(0, 10)
@@ -406,7 +565,9 @@
     document.getElementById(id.replace('-err', '')).classList.remove('error')
   }
   function clearAllErrors() {
-    ['name-err','phone-err','email-err','pin-err'].forEach(clearErr)
+    // Dinámico (no lista fija) para cubrir también los campos condicionales
+    // (fecha de nacimiento / género / custom) que solo existen si el negocio los pidió.
+    document.querySelectorAll('.err').forEach(el => clearErr(el.id))
   }
 
   function validate() {
@@ -421,6 +582,22 @@
     if (phone.length !== 10) { showErr('phone-err','Ingresa un número de 10 dígitos'); ok = false }
     if (!/^\S+@\S+\.\S+$/.test(email)) { showErr('email-err','Ingresa un email válido'); ok = false }
     if (pin.length !== 4 || !/^\d{4}$/.test(pin)) { showErr('pin-err','Ingresa un PIN de 4 dígitos'); ok = false }
+
+    if (programConfig.askBirthday) {
+      const month = document.getElementById('dob-month').value
+      const day = document.getElementById('dob-day').value
+      if (!month || !day) { showErr('dob-err', 'Elige mes y día'); ok = false }
+    }
+    if (programConfig.askGender && !selectedGender) {
+      showErr('gender-err', 'Elige una opción')
+      ok = false
+    }
+    programConfig.customFields.forEach(field => {
+      if (!field.required) return
+      const val = document.getElementById(`cf-${field.id}`).value.trim()
+      if (!val) { showErr(`cf-${field.id}-err`, 'Este campo es obligatorio'); ok = false }
+    })
+
     return ok
   }
 
@@ -437,6 +614,23 @@
       phone: '+52' + document.getElementById('phone').value.replace(/\D/g,''),
       email: document.getElementById('email').value.trim() || undefined,
       emailConsent: document.getElementById('consent').checked,
+    }
+
+    if (programConfig.askBirthday) {
+      const month = document.getElementById('dob-month').value
+      const day = document.getElementById('dob-day').value
+      body.birthdayDate = `${month}-${day}`
+    }
+    if (programConfig.askGender && selectedGender) {
+      body.gender = selectedGender
+    }
+    if (programConfig.customFields.length > 0) {
+      const customFieldValues = {}
+      programConfig.customFields.forEach(field => {
+        const val = document.getElementById(`cf-${field.id}`).value.trim()
+        if (val) customFieldValues[field.id] = val
+      })
+      if (Object.keys(customFieldValues).length > 0) body.customFieldValues = customFieldValues
     }
 
     let googlePassUrl = null
