@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { test } from 'node:test'
 import vm from 'node:vm'
 
-const pages = ['loyalty-join.html', 'loyalty-pass.html', 'loyalty-reset-pin.html']
+const pages = ['loyalty-join.html', 'loyalty-pass.html', 'loyalty-reset-pin.html', 'mostrador.html']
 const unsafeSinks = [/\.innerHTML\s*=/, /\.outerHTML\s*=/, /insertAdjacentHTML\s*\(/, /document\.write\s*\(/, /\beval\s*\(/]
 
 for (const page of pages) {
@@ -36,6 +36,16 @@ test('sensitive URL tokens are removed from browser history', async () => {
   assert.match(reset, /params\.delete\('token'\)/)
 })
 
+test('mostrador keeps customer credentials and data out of localStorage', async () => {
+  const mostrador = await readFile(new URL('../mostrador.html', import.meta.url), 'utf8')
+  const storedDevice = mostrador.match(/const allowed = \{([\s\S]*?)\n\s*\}/)?.[1] || ''
+  assert.match(mostrador, /history\.replaceState/)
+  assert.match(mostrador, /assets\/jsqr\.min\.js/)
+  assert.match(mostrador, /verificationGrant: lookup\.verificationGrant/)
+  assert.doesNotMatch(storedDevice, /verificationGrant|customer|qrToken|phone/)
+  assert.match(mostrador, /stream\.getTracks\(\)\.forEach\(track => track\.stop\(\)\)/)
+})
+
 test('saved autofill data expires instead of persisting indefinitely', async () => {
   const join = await readFile(new URL('../loyalty-join.html', import.meta.url), 'utf8')
   assert.match(join, /maxAgeMs/)
@@ -47,7 +57,7 @@ test('saved autofill data expires instead of persisting indefinitely', async () 
 })
 
 test('merchant logos use a neutral plate and configurable colors get contrasting text', async () => {
-  for (const page of pages) {
+  for (const page of ['loyalty-join.html', 'loyalty-pass.html', 'loyalty-reset-pin.html']) {
     const source = await readFile(new URL(`../${page}`, import.meta.url), 'utf8')
     assert.match(source, /--text-on-brand/)
     assert.match(source, /background:\s*#fff/)

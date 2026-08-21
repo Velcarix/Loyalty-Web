@@ -72,6 +72,8 @@
     }
     .reward-banner.visible { display: flex; align-items: center; gap: 10px; }
     .reward-banner span { font-size: 13px; font-weight: 600; }
+    .reward-banner .reward-icon { display: grid; place-items: center; flex: 0 0 auto; }
+    .reward-banner .reward-icon svg { width: 20px; height: 20px; }
 
     /* ── Content card ──────────────────────────────────── */
     .content {
@@ -116,7 +118,11 @@
       background: #F9FAFB; border-radius: 12px;
       padding: 12px 14px; gap: 12px;
     }
-    .tx-icon { font-size: 20px; flex-shrink: 0; }
+    .tx-icon { display: grid; width: 20px; height: 20px; flex: 0 0 20px; place-items: center; }
+    .tx-icon svg { width: 20px; height: 20px; }
+    .tx-icon.tx-accumulate { color: var(--green); }
+    .tx-icon.tx-redeem { color: var(--red); }
+    .tx-icon.tx-reward { color: var(--amber); }
     .tx-info { flex: 1; min-width: 0; }
     .tx-label { font-size: 13px; font-weight: 600; color: #111827; }
     .tx-date  { font-size: 11px; color: var(--muted); margin-top: 2px; }
@@ -208,7 +214,7 @@
 
   <!-- Pending reward -->
   <div class="reward-banner" id="reward-banner">
-    <span>🎁</span>
+    <span class="reward-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v8H4v-8m18-4H2v4h20ZM12 20V8m0 0H7.5A2.5 2.5 0 1 1 10 5.5C10 6.9 12 8 12 8Zm0 0h4.5A2.5 2.5 0 1 0 14 5.5C14 6.9 12 8 12 8Z"/></svg></span>
     <span id="reward-desc">Café americano gratis — díselo al cajero</span>
   </div>
 </div>
@@ -355,12 +361,34 @@
     document.getElementById('prof-phone').value = pass.phone
 
     // Transactions
+    function createTransactionIcon(type) {
+      const paths = type === 'accumulate'
+        ? ['M12 19V5', 'm5 12 7-7 7 7']
+        : type === 'redeem'
+          ? ['M3 5h18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z', 'M1 10h22']
+          : ['M20 12v8H4v-8m18-4H2v4h20ZM12 20V8m0 0H7.5A2.5 2.5 0 1 1 10 5.5C10 6.9 12 8 12 8Zm0 0h4.5A2.5 2.5 0 1 0 14 5.5C14 6.9 12 8 12 8Z']
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      svg.setAttribute('aria-hidden', 'true')
+      svg.setAttribute('viewBox', '0 0 24 24')
+      svg.setAttribute('fill', 'none')
+      svg.setAttribute('stroke', 'currentColor')
+      svg.setAttribute('stroke-width', '1.8')
+      svg.setAttribute('stroke-linecap', 'round')
+      svg.setAttribute('stroke-linejoin', 'round')
+      paths.forEach(d => {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+        path.setAttribute('d', d)
+        svg.append(path)
+      })
+      return svg
+    }
+
     const list = document.getElementById('tx-list')
     pass.transactions.forEach(tx => {
-      const icon = tx.type === 'accumulate' ? '⬆️' : tx.type === 'redeem' ? '💳' : '🎁'
+      const iconType = tx.type === 'accumulate' ? 'accumulate' : tx.type === 'redeem' ? 'redeem' : 'reward'
       const deltaClass = tx.delta.startsWith('+') ? 'pos' : 'neg'
       const row = document.createElement('div'); row.className = 'tx-row'
-      const iconEl = document.createElement('div'); iconEl.className = 'tx-icon'; iconEl.textContent = icon
+      const iconEl = document.createElement('div'); iconEl.className = `tx-icon tx-${iconType}`; iconEl.append(createTransactionIcon(iconType))
       const info = document.createElement('div'); info.className = 'tx-info'
       const labelEl = document.createElement('div'); labelEl.className = 'tx-label'; labelEl.textContent = tx.label
       const dateEl = document.createElement('div'); dateEl.className = 'tx-date'; dateEl.textContent = tx.date
@@ -464,7 +492,7 @@
 
   // ── Profile save ────────────────────────────────────────────────────────────
   async function saveProfile() {
-    showToast('✅ Perfil actualizado')
+    showToast('Perfil actualizado')
   }
 
   // ── Reset PIN ───────────────────────────────────────────────────────────────
@@ -475,7 +503,7 @@
         headers: { 'X-Pass-Token': passToken, 'Content-Type': 'application/json' },
       })
     } catch { /* best effort */ }
-    showToast('📧 Te enviamos un email para cambiar tu PIN')
+    showToast('Te enviamos un email para cambiar tu PIN')
   }
 
   // ── Toast ───────────────────────────────────────────────────────────────────

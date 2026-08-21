@@ -11,6 +11,7 @@
     :root {
       --brand:   #2563EB;
       --brand-dark: #1D4ED8;
+      --brand-accent: #2DD4BF;
       --text-on-brand: #fff;
       --bg:      #F7F9FC;
       --surface: #fff;
@@ -171,7 +172,8 @@
     #wallet-step.visible { display: block; }
     #form-step.hidden { display: none; }
 
-    .wallet-icon { font-size: 64px; margin-bottom: 16px; }
+    .wallet-icon { display: flex; justify-content: center; margin-bottom: 16px; color: var(--brand); }
+    .wallet-icon svg { width: 64px; height: 64px; }
     .wallet-title { font-size: 20px; font-weight: 800; color: #111827; margin-bottom: 8px; }
     .wallet-sub { font-size: 14px; color: var(--muted); margin-bottom: 32px; line-height: 1.5; }
 
@@ -189,16 +191,19 @@
     .wallet-btn svg { flex-shrink: 0; }
 
     .polling-msg {
+      align-items: center; justify-content: center; gap: 7px;
       font-size: 13px; color: var(--muted); margin-top: 20px;
       display: none;
     }
-    .polling-msg.visible { display: block; }
+    .polling-msg.visible { display: flex; }
+    .polling-msg svg { width: 16px; height: 16px; flex: 0 0 auto; }
 
     /* ── Success ───────────────────────────────────────── */
     #success-step { display: none; text-align: center; }
     #success-step.visible { display: block; }
 
-    .success-icon { font-size: 72px; margin-bottom: 16px; }
+    .success-icon { display: flex; justify-content: center; margin-bottom: 16px; color: var(--green); }
+    .success-icon svg { width: 72px; height: 72px; }
     .success-title { font-size: 22px; font-weight: 800; color: #111827; margin-bottom: 8px; }
     .success-sub { font-size: 14px; color: var(--muted); line-height: 1.6; }
 
@@ -272,7 +277,9 @@
 
   <!-- ── Wallet download step ── -->
   <div id="wallet-step">
-    <div class="wallet-icon">🎉</div>
+    <div class="wallet-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg>
+    </div>
     <div class="wallet-title">¡Ya casi listo!</div>
     <div class="wallet-sub">
       Agrega tu tarjeta al Wallet de tu teléfono para activarla.<br>
@@ -297,18 +304,20 @@
     </button>
 
     <p class="polling-msg" id="polling-msg">
-      ⏳ Esperando confirmación del Wallet… (puede tardar unos segundos)
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <span>Esperando confirmación del Wallet… (puede tardar unos segundos)</span>
     </p>
   </div>
 
   <!-- ── Success ── -->
   <div id="success-step">
-    <div class="success-icon">✅</div>
+    <div class="success-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg>
+    </div>
     <div class="success-title">¡Tarjeta activada!</div>
     <div class="success-sub">
       Tu tarjeta ya está activa en tu Wallet.<br>
-      Muéstrala al cajero en cada compra para acumular puntos.<br><br>
-      <strong>Guarda tus datos</strong> — la próxima vez que te registres en otro negocio Copo, tus datos se llenan automáticamente.
+      Muéstrala al cajero en cada visita para acumular visitas.
     </div>
   </div>
 
@@ -344,10 +353,17 @@
 
   function applyBranding(card) {
     const color = normalizeBrandColor(card.brandColor || '#2563EB')
+    const design = card.businessInfo && typeof card.businessInfo.design === 'object' ? card.businessInfo.design : {}
+    const accent = normalizeBrandColor(design.accentColor || '#2DD4BF')
+    const cardStyle = ['solid', 'gradient', 'banner'].includes(design.cardStyle) ? design.cardStyle : 'gradient'
     const textColor = getTextOnBrand(color)
-    document.querySelector('.pass-header').style.background = color
+    // Both values are normalized #RRGGBB colors before entering a CSS value.
+    document.querySelector('.pass-header').style.background = cardStyle === 'gradient'
+      ? `linear-gradient(135deg, ${color}, ${accent})`
+      : color
     document.documentElement.style.setProperty('--brand', color)
     document.documentElement.style.setProperty('--brand-dark', color)
+    document.documentElement.style.setProperty('--brand-accent', accent)
     document.documentElement.style.setProperty('--text-on-brand', textColor)
     document.getElementById('pass-name').textContent = card.programName || card.name
     document.getElementById('pass-desc').textContent = card.description
