@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/loyalty/pass/:serial", "destination": "/loyalty-pass.html" },
+    { "source": "/loyalty/reset-pin/:token", "destination": "/loyalty-reset-pin.html" }
+  ]
+}
