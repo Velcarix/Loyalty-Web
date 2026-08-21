@@ -1,0 +1,17 @@
+{
+  "name": "Copo Mostrador",
+  "short_name": "Mostrador",
+  "description": "Identifica clientes y registra visitas en Copo Loyalty.",
+  "start_url": "./mostrador.html",
+  "display": "standalone",
+  "theme_color": "#2563EB",
+  "background_color": "#F7F9FC",
+  "icons": [
+    {
+      "src": "./assets/favicon.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
