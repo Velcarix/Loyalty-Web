@@ -643,7 +643,8 @@
 
     const body = {
       name: document.getElementById('name').value.trim(),
-      phone: '+52' + document.getElementById('phone').value.replace(/\D/g,''),
+      phone: document.getElementById('phone').value.replace(/\D/g,''),
+      pin: pinInputs.map(input => input.value).join(''),
       email: document.getElementById('email').value.trim() || undefined,
       emailConsent: document.getElementById('consent').checked,
     }
