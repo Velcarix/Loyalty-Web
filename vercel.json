@@ -1,6 +1,7 @@
 {
+  "cleanUrls": true,
   "rewrites": [
-    { "source": "/loyalty/pass/:serial", "destination": "/loyalty-pass.html" },
-    { "source": "/loyalty/reset-pin/:token", "destination": "/loyalty-reset-pin.html" }
+    { "source": "/loyalty/pass/:serial", "destination": "/loyalty-pass" },
+    { "source": "/loyalty/reset-pin/:token", "destination": "/loyalty-reset-pin" }
   ]
 }
