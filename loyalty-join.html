@@ -311,9 +311,6 @@
 
   <!-- ── Success ── -->
   <div id="success-step">
-    <div class="success-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg>
-    </div>
     <div class="success-title">¡Tarjeta activada!</div>
     <div class="success-sub">
       Tu tarjeta ya está activa en tu Wallet.<br>
@@ -717,7 +714,7 @@
     const serial = segments[segments.length - 2] || null
 
     const msg = document.getElementById('polling-msg')
-    msg.textContent = '⏳ Esperando confirmación del Wallet… (puede tardar unos segundos)'
+    msg.querySelector('span').textContent = 'Esperando confirmación del Wallet… (puede tardar unos segundos)'
     msg.classList.add('visible')
     window.location.href = url
     pollApplePassStatus(serial, msg)

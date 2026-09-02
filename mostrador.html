@@ -147,13 +147,6 @@
     .scan-corners::before, .scan-corners::after { position: absolute; inset: 24px; border: 2px solid var(--signal); border-radius: 7px; content: ""; }
     .scan-corners::after { inset: 43px; border-color: #fff; border-radius: 2px; }
 
-    .manual-entry { margin-top: 15px; border: 1px solid var(--line); border-radius: 17px; background: #fff; }
-    .manual-entry summary { display: flex; min-height: 55px; align-items: center; padding: 0 16px; color: var(--ink-700); cursor: pointer; font-size: 14px; font-weight: 750; }
-    .manual-entry[open] summary { border-bottom: 1px solid var(--line); }
-    .manual-body { padding: 16px; }
-    .manual-note { margin: 0 0 15px; border-left: 3px solid var(--amber); padding-left: 10px; color: var(--ink-500); font-size: 12px; line-height: 1.45; }
-    .manual-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 10px; }
-    .manual-grid .text-input { min-height: 48px; }
     .empty-state { margin-top: 24px; border: 1px dashed #CBD5E1; border-radius: 18px; padding: 25px 20px; color: var(--ink-700); background: rgba(255, 255, 255, .6); text-align: center; }
     .empty-state p { margin: 0; font-size: 14px; line-height: 1.5; }
 
@@ -276,18 +269,6 @@
         <button class="scan-button" id="open-scanner" type="button">Escanear QR</button>
       </div>
 
-      <details class="manual-entry" id="manual-entry">
-        <summary>El cliente no trae su tarjeta</summary>
-        <div class="manual-body">
-          <p class="manual-note">El código de 6 dígitos aparece en el pass del cliente (Wallet), no es su PIN.</p>
-          <div class="manual-grid">
-            <div><label class="field-label" for="customer-phone">Teléfono</label><input class="text-input" id="customer-phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="10" placeholder="9991234567" /></div>
-            <div><label class="field-label" for="pass-otp">Código</label><input class="text-input" id="pass-otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="483920" /></div>
-          </div>
-          <p class="form-error" id="manual-error" role="alert" hidden></p>
-          <button class="button button-primary button-wide" id="manual-submit" type="button" style="margin-top: 14px">Identificar cliente</button>
-        </div>
-      </details>
     </section>
 
     <section class="screen" id="customer-screen" aria-labelledby="customer-name" hidden>
@@ -376,11 +357,6 @@
         readyMessage: document.getElementById('ready-message'),
         scanPanel: document.getElementById('scan-panel'),
         openScanner: document.getElementById('open-scanner'),
-        manualEntry: document.getElementById('manual-entry'),
-        customerPhone: document.getElementById('customer-phone'),
-        passOtp: document.getElementById('pass-otp'),
-        manualError: document.getElementById('manual-error'),
-        manualSubmit: document.getElementById('manual-submit'),
         customerName: document.getElementById('customer-name'),
         customerTier: document.getElementById('customer-tier'),
         rewardCard: document.getElementById('reward-card'),
@@ -600,7 +576,6 @@
         elements.programEmpty.hidden = hasPrograms
         elements.programSection.hidden = state.programs.length < 2
         elements.scanPanel.hidden = !state.selectedProgram
-        elements.manualEntry.hidden = !state.selectedProgram
         elements.openScanner.disabled = !state.selectedProgram
         if (!hasPrograms) return
         state.programs.forEach(program => {
@@ -908,7 +883,7 @@
           state.scanner.lastPayloadAt = now
           if (!duplicate) {
             stopScanner()
-            await identifyCustomer({ qrToken: payload }, elements.manualError)
+            await identifyCustomer({ qrToken: payload }, elements.readyMessage)
             return
           }
         }
@@ -952,16 +927,15 @@
         } catch (error) {
           stopScanner()
           if (error?.name === 'NotAllowedError') setMessage(elements.readyMessage, 'No permitiste usar la cámara. Actívala en la barra de direcciones del navegador.')
-          else if (error?.name === 'NotFoundError') setMessage(elements.readyMessage, 'No encontramos una cámara en este teléfono. Usa teléfono y código del pass.')
-          else setMessage(elements.readyMessage, 'No pudimos abrir la cámara. Usa teléfono y código del pass.')
+          else if (error?.name === 'NotFoundError') setMessage(elements.readyMessage, 'No encontramos una cámara en este teléfono.')
+          else setMessage(elements.readyMessage, 'No pudimos abrir la cámara. Intenta de nuevo.')
         }
       }
 
       function openScanner() {
         setMessage(elements.readyMessage, '')
         if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
-          elements.manualEntry.open = true
-          setMessage(elements.readyMessage, 'La cámara solo funciona en HTTPS. Usa teléfono y código del pass.')
+          setMessage(elements.readyMessage, 'La cámara solo funciona en HTTPS. Abre esta página con una conexión segura.')
           return
         }
         void startScanner(state.device?.cameraDeviceId || undefined)
@@ -1039,19 +1013,6 @@
         }
       }
 
-      function handleManualLookup() {
-        const phone = onlyDigits(elements.customerPhone.value)
-        const passOtp = onlyDigits(elements.passOtp.value)
-        if (!/^\d{10}$/.test(phone)) { setMessage(elements.manualError, 'Escribe el teléfono de 10 dígitos del cliente.'); return }
-        if (!/^\d{6}$/.test(passOtp)) { setMessage(elements.manualError, 'Escribe el código de 6 dígitos que aparece en su pass.'); return }
-        elements.manualSubmit.disabled = true
-        elements.manualSubmit.textContent = 'Identificando…'
-        void identifyCustomer({ phone, passOtp }, elements.manualError).finally(() => {
-          elements.manualSubmit.disabled = false
-          elements.manualSubmit.textContent = 'Identificar cliente'
-        })
-      }
-
       elements.pairForm.addEventListener('submit', pairDevice)
       elements.pairCode.addEventListener('input', () => { elements.pairCode.value = onlyDigits(elements.pairCode.value); resetPairError() })
       elements.menuToggle.addEventListener('click', () => {
@@ -1063,7 +1024,6 @@
         if (confirm('¿Desvincular este teléfono? Tendrás que usar un código nuevo para volver a conectarlo.')) clearDevice()
       })
       elements.openScanner.addEventListener('click', openScanner)
-      elements.manualSubmit.addEventListener('click', handleManualLookup)
       elements.scannerClose.addEventListener('click', stopScanner)
       elements.scannerBackdrop.addEventListener('click', stopScanner)
       elements.cameraSwitch.addEventListener('click', () => { void switchCamera() })
