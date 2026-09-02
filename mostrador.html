@@ -112,6 +112,9 @@
     .form-error, .status-message { margin: 14px 0 0; border-radius: 12px; padding: 11px 12px; font-size: 13px; font-weight: 650; line-height: 1.4; }
     .form-error { border: 1px solid #FECACA; color: #991B1B; background: var(--red-soft); }
     .status-message { border: 1px solid #BFDBFE; color: #1E40AF; background: var(--blue-50); }
+    .error-details { margin: 8px 0 0; font-size: 12px; color: var(--ink-500); }
+    .error-details summary { cursor: pointer; font-weight: 650; padding: 4px 0; }
+    .error-details pre { margin: 6px 0 0; padding: 10px 11px; border-radius: 10px; border: 1px solid var(--ink-200, #E2E8F0); background: #F8FAFC; color: var(--ink-700); font-size: 11px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; overflow-x: auto; }
     .card-actions { display: flex; gap: 10px; margin-top: 22px; }
     .card-actions .button { flex: 1; }
     .security-note { display: flex; gap: 9px; margin: 18px 2px 0; color: var(--ink-500); font-size: 12px; line-height: 1.45; }
@@ -178,8 +181,8 @@
     .customer-actions .button:first-child { min-height: 57px; }
     .daily-limit { margin: 15px 0 0; color: #9A3412; font-size: 13px; font-weight: 700; }
 
-    .scanner-modal, .dialog-backdrop { position: fixed; z-index: 20; inset: 0; }
-    .dialog-backdrop { background: rgba(11, 19, 43, .76); backdrop-filter: blur(3px); }
+    .scanner-modal { position: fixed; z-index: 20; inset: 0; }
+    .dialog-backdrop { position: absolute; inset: 0; background: rgba(11, 19, 43, .76); backdrop-filter: blur(3px); }
     .scanner-modal { display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); }
     .scanner-dialog { position: relative; width: min(100%, 560px); overflow: hidden; border-radius: 25px; background: var(--navy); box-shadow: 0 28px 70px rgba(0,0,0,.45); animation: dialog-enter 220ms var(--ease-out); }
     .scanner-video { display: block; width: 100%; min-height: min(72vh, 480px); max-height: 72vh; object-fit: cover; background: #111827; }
@@ -215,7 +218,7 @@
 <body>
   <main class="app-shell">
     <header class="topbar">
-      <a class="brand-lockup" href="./mostrador.html" aria-label="Copo Mostrador">
+      <a class="brand-lockup" href="./mostrador" aria-label="Copo Mostrador">
         <span class="brand-mark" aria-hidden="true"><img src="./assets/favicon.png" alt="" /></span>
         <span class="brand-name">copo <span>mostrador</span></span>
       </a>
@@ -238,6 +241,7 @@
           <input class="text-input" id="device-label" name="label" type="text" maxlength="80" value="Teléfono" autocomplete="organization" />
         </div>
         <p class="form-error" id="pair-error" role="alert" hidden></p>
+        <details class="error-details" id="pair-error-details" hidden><summary>Ver detalles técnicos</summary><pre id="pair-error-dump"></pre></details>
         <div class="card-actions"><button class="button button-primary button-wide" id="pair-submit" type="submit">Conectar</button></div>
       </form>
       <p class="security-note"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Este teléfono solo podrá identificar clientes, registrar visitas y entregar premios.</p>
@@ -359,6 +363,8 @@
         pairCode: document.getElementById('pair-code'),
         deviceLabel: document.getElementById('device-label'),
         pairError: document.getElementById('pair-error'),
+        pairErrorDetails: document.getElementById('pair-error-details'),
+        pairErrorDump: document.getElementById('pair-error-dump'),
         pairSubmit: document.getElementById('pair-submit'),
         merchantName: document.getElementById('merchant-name'),
         menuToggle: document.getElementById('menu-toggle'),
@@ -482,7 +488,29 @@
         }
       }
 
-      function resetPairError() { setMessage(elements.pairError, '') }
+      function resetPairError() {
+        setMessage(elements.pairError, '')
+        elements.pairErrorDetails.hidden = true
+        elements.pairErrorDump.textContent = ''
+      }
+
+      function showPairError(friendly, error) {
+        setMessage(elements.pairError, friendly)
+        if (!error) { elements.pairErrorDetails.hidden = true; return }
+        const lines = [
+          `hora:     ${new Date().toISOString()}`,
+          `endpoint: ${error.method || 'POST'} ${error.url || `${API_BASE}/api/v1/integrations/pos/mostrador/pair`}`,
+          `status:   ${error.status ?? '(sin respuesta HTTP)'}`,
+          `code:     ${error.code || '(ninguno)'}`,
+          `mensaje:  ${error.message || '(ninguno)'}`,
+        ]
+        if (error.detail) lines.push(`detalle:  ${error.detail}`)
+        if (error.rawBody) lines.push(`respuesta:\n${error.rawBody}`)
+        if (error.code === 'NETWORK_ERROR') lines.push('nota:     el navegador no pudo llamar a la API (CORS, DNS, sin internet o API caída).')
+        elements.pairErrorDump.textContent = lines.join('\n')
+        elements.pairErrorDetails.hidden = false
+        console.error('[mostrador] emparejamiento falló', error)
+      }
 
       function clearDevice() {
         stopScanner()
@@ -521,10 +549,12 @@
         const headers = { ...(requestOptions.headers || {}) }
         if (requestOptions.body !== undefined) headers['Content-Type'] = 'application/json'
         if (requestOptions.authorized !== false && state.device?.deviceToken) headers['x-loyalty-device-token'] = state.device.deviceToken
+        const url = `${API_BASE}${path}`
+        const method = requestOptions.method || 'GET'
         let response
         try {
-          response = await fetch(`${API_BASE}${path}`, {
-            method: requestOptions.method || 'GET',
+          response = await fetch(url, {
+            method,
             headers,
             body: requestOptions.body === undefined ? undefined : JSON.stringify(requestOptions.body),
           })
@@ -532,13 +562,21 @@
           const error = new Error('Sin conexión')
           error.code = 'NETWORK_ERROR'
           error.cause = cause
+          error.url = url
+          error.method = method
+          error.detail = cause instanceof Error ? `${cause.name}: ${cause.message}` : String(cause)
           throw error
         }
-        const body = await response.json().catch(() => ({}))
+        const raw = await response.text()
+        let body = {}
+        try { body = raw ? JSON.parse(raw) : {} } catch { /* respuesta no-JSON, se conserva en error.rawBody */ }
         if (!response.ok) {
-          const error = new Error(body?.error?.message || 'No se pudo completar la acción')
+          const error = new Error(body?.error?.message || `HTTP ${response.status}`)
           error.code = body?.error?.code || 'HTTP_ERROR'
           error.status = response.status
+          error.url = url
+          error.method = method
+          error.rawBody = raw
           if (isDeviceUnauthorized(error)) clearDevice()
           throw error
         }
@@ -759,7 +797,15 @@
         try {
           await apiRequest('/api/v1/loyalty/pos/claim-reward', {
             method: 'POST',
-            body: { programId: state.selectedProgram.id, cardCustomerId: session.customer.id, branchId, cashierId: state.device.deviceId },
+            body: {
+              eventUuid: session.eventUuid,
+              programId: state.selectedProgram.id,
+              cardCustomerId: session.customer.id,
+              branchId,
+              cashierId: state.device.deviceId,
+              verificationMethod: session.verificationMethod,
+              verificationGrant: session.verificationGrant,
+            },
           })
           showToast('Premio entregado.', 'success')
           setTimeout(() => { if (state.customerSession === session) endCustomerSession() }, 2000)
@@ -958,7 +1004,10 @@
         resetPairError()
         const code = onlyDigits(elements.pairCode.value)
         const label = elements.deviceLabel.value.trim() || 'Teléfono'
-        if (!/^\d{8}$/.test(code)) { setMessage(elements.pairError, 'Escribe el código de 8 dígitos que te dio tu administrador.'); return }
+        if (!/^\d{8}$/.test(code)) {
+          setMessage(elements.pairError, `El código debe tener 8 dígitos; recibí ${code.length}. Revísalo con tu administrador.`)
+          return
+        }
         elements.pairSubmit.disabled = true
         elements.pairSubmit.textContent = 'Conectando…'
         try {
@@ -978,7 +1027,12 @@
           setView('ready')
           showToast('Teléfono conectado.', 'success')
         } catch (error) {
-          setMessage(elements.pairError, error?.code === 'INVALID_OR_EXPIRED_CODE' ? 'Código inválido o expirado. Pide uno nuevo.' : (error?.message || 'No pudimos conectar el teléfono.'))
+          const friendly = error?.code === 'INVALID_OR_EXPIRED_CODE'
+            ? 'Código inválido o expirado. Pide uno nuevo.'
+            : error?.code === 'NETWORK_ERROR'
+              ? 'No pudimos contactar al servidor. Revisa tu internet e intenta otra vez.'
+              : (error?.message || 'No pudimos conectar el teléfono.')
+          showPairError(friendly, error)
         } finally {
           elements.pairSubmit.disabled = false
           elements.pairSubmit.textContent = 'Conectar'
