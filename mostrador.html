@@ -797,7 +797,15 @@
         try {
           await apiRequest('/api/v1/loyalty/pos/claim-reward', {
             method: 'POST',
-            body: { programId: state.selectedProgram.id, cardCustomerId: session.customer.id, branchId, cashierId: state.device.deviceId },
+            body: {
+              eventUuid: session.eventUuid,
+              programId: state.selectedProgram.id,
+              cardCustomerId: session.customer.id,
+              branchId,
+              cashierId: state.device.deviceId,
+              verificationMethod: session.verificationMethod,
+              verificationGrant: session.verificationGrant,
+            },
           })
           showToast('Premio entregado.', 'success')
           setTimeout(() => { if (state.customerSession === session) endCustomerSession() }, 2000)
