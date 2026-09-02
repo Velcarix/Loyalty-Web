@@ -181,8 +181,8 @@
     .customer-actions .button:first-child { min-height: 57px; }
     .daily-limit { margin: 15px 0 0; color: #9A3412; font-size: 13px; font-weight: 700; }
 
-    .scanner-modal, .dialog-backdrop { position: fixed; z-index: 20; inset: 0; }
-    .dialog-backdrop { background: rgba(11, 19, 43, .76); backdrop-filter: blur(3px); }
+    .scanner-modal { position: fixed; z-index: 20; inset: 0; }
+    .dialog-backdrop { position: absolute; inset: 0; background: rgba(11, 19, 43, .76); backdrop-filter: blur(3px); }
     .scanner-modal { display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); }
     .scanner-dialog { position: relative; width: min(100%, 560px); overflow: hidden; border-radius: 25px; background: var(--navy); box-shadow: 0 28px 70px rgba(0,0,0,.45); animation: dialog-enter 220ms var(--ease-out); }
     .scanner-video { display: block; width: 100%; min-height: min(72vh, 480px); max-height: 72vh; object-fit: cover; background: #111827; }
