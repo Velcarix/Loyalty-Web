@@ -316,7 +316,11 @@
   function init(pass) {
     const effectiveColor = normalizeBrandColor(pass.brandColor)
     document.getElementById('pass-card').style.background = effectiveColor
-    const textColor = getTextOnBrand(effectiveColor)
+    // El comerciante puede fijar un color de texto propio en el dashboard; si no,
+    // se elige automáticamente blanco o negro según el contraste con el fondo.
+    const textColor = /^#[0-9a-f]{6}$/i.test(String(pass.textColor || ''))
+      ? String(pass.textColor).toUpperCase()
+      : getTextOnBrand(effectiveColor)
     document.documentElement.style.setProperty('--text-on-brand', textColor)
     const logoEl = document.getElementById('pass-logo')
     if (pass.logoUrl) {
@@ -416,6 +420,7 @@
           programName: d.programName || d.program?.programName || 'Loyalty',
           programType: d.programType || d.program?.type || 'points',
           brandColor: color,
+          textColor: d.textColor || d.design?.textColor || d.businessInfo?.design?.textColor || null,
           logoUrl: d.logoUrl || d.program?.logoUrl || null,
           logoText: (d.programName || d.program?.programName || 'LP').slice(0,2).toUpperCase(),
           pointsBalance: d.pointsBalance ?? 0,
